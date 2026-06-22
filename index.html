@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BET 261 PREDICTOR</title>
+<style>
+  :root {
+    --bg: #0a0d1a;
+    --surface: #111428;
+    --surface2: #181c35;
+    --accent: #f0b429;
+    --accent2: #e53e3e;
+    --green: #38a169;
+    --blue: #4299e1;
+    --text: #e2e8f0;
+    --muted: #718096;
+    --border: rgba(255,255,255,0.08);
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  /* Header */
+  .header { background: linear-gradient(135deg, #1a1f3a, #0d1024); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+  .logo { font-size: 1.5rem; font-weight: 800; background: linear-gradient(90deg, var(--accent), #ff6b35); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 2px; }
+  .badge { background: var(--accent2); color: #fff; font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase; }
+  .ticker { margin-left: auto; font-size: 13px; color: var(--muted); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .tab { flex: 1; padding: 1rem; text-align: center; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); border-bottom: 3px solid transparent; transition: all .2s; }
+  .tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* Layout */
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+  @media(max-width:700px) { .grid-2 { grid-template-columns: 1fr; } .grid-3 { grid-template-columns: 1fr 1fr; } }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
+  .card-title { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+  .card-title::before { content: ''; width: 3px; height: 16px; border-radius: 2px; background: var(--accent); }
+
+  /* Result box */
+  .result-box { background: var(--surface2); border-radius: 10px; padding: 1.25rem; text-align: center; }
+  .result-prob { font-size: 3rem; font-weight: 800; line-height: 1; }
+  .result-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .rec-green { color: #68d391; }
+  .rec-amber { color: var(--accent); }
+  .rec-red { color: #fc8181; }
+
+  /* Progress bar */
+  .progress-wrap { background: rgba(255,255,255,0.06); border-radius: 99px; height: 8px; margin: 12px 0; overflow: hidden; }
+  .progress-bar { height: 100%; border-radius: 99px; transition: width .6s ease; }
+
+  /* Inputs */
+  input[type=number], input[type=text], select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 10px 12px; font-size: 14px; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  select option { background: #1a1f3a; }
+
+  /* Buttons */
+  .btn { padding: 11px 24px; border-radius: 8px; border: none; font-weight: 700; font-size: 14px; cursor: pointer; transition: all .15s; }
+  .btn-primary { background: var(--accent); color: #000; width: 100%; margin-top: 12px; }
+  .btn-primary:hover { background: #e9a820; transform: translateY(-1px); }
+  .btn-sm { background: rgba(255,255,255,0.07); color: var(--text); padding: 6px 14px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; }
+  .btn-sm:hover { background: rgba(255,255,255,0.12); }
+
+  /* History pills */
+  .history-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .pill { padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+  .pill-low  { background: rgba(252,129,129,.15); color: #fc8181; }
+  .pill-mid  { background: rgba(240,180,41,.15);  color: var(--accent); }
+  .pill-high { background: rgba(104,211,145,.15); color: #68d391; }
+  .pill-mega { background: rgba(66,153,225,.15);  color: #63b3ed; }
+
+  /* Form row */
+  .form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .form-label { font-size: 12px; color: var(--muted); }
+
+  /* Stats row */
+  .stat-item { text-align: center; }
+  .stat-val { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+  .stat-key { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Match */
+  .teams-vs { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; }
+  .team-name { font-size: 1rem; font-weight: 700; }
+  .vs { color: var(--muted); font-size: 13px; }
+  .prob-bars { display: flex; gap: 4px; height: 40px; align-items: flex-end; margin: 1rem 0; }
+  .prob-bar { flex: 1; border-radius: 4px 4px 0 0; min-height: 6px; transition: height .5s; }
+  .form-dots { display: flex; gap: 4px; }
+  .dot { width: 20px; height: 20px; border-radius: 50%; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .dot-W { background: rgba(104,211,145,.2); color: #68d391; }
+  .dot-D { background: rgba(240,180,41,.2);  color: var(--accent); }
+  .dot-L { background: rgba(252,129,129,.2); color: #fc8181; }
+
+  /* Toast */
+  #toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface); border: 1px solid var(--border); padding: 12px 24px; border-radius: 8px; font-size: 13px; transition: transform .3s; z-index: 999; }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Page toggle */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Score badge */
+  .score-badge { background: var(--accent); color: #000; font-size: 1.6rem; font-weight: 800; padding: 8px 20px; border-radius: 8px; display: inline-block; }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #68d391; display: inline-block; animation: blink 1s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">BET 261</div>
+  <div class="badge">PREDICTOR</div>
+  <div style="font-size:13px; color:var(--muted); margin-left:8px;">🇲🇬 Madagascar Edition</div>
+  <div class="ticker" id="ticker">⏰ <span id="time-now"></span></div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showPage('aviator')">✈️ Aviator</div>
+  <div class="tab" onclick="showPage('virtual')">⚽ Match Virtuel</div>
+  <div class="tab" onclick="showPage('stats')">📊 Statistiques</div>
+  <div class="tab" onclick="showPage('guide')">📖 Guide</div>
+</div>
+
+<!-- ═══════════ PAGE AVIATOR ═══════════ -->
+<div class="page active" id="page-aviator">
+<div class="container">
+
+  <div class="grid-2">
+    <!-- Panneau gauche : Prédiction -->
+    <div>
+      <div class="card">
+        <div class="card-title">Paramètres de Prédiction</div>
+
+        <div class="form-row">
+          <label class="form-label">Multiplicateur cible (x)</label>
+          <input type="number" id="av-target" value="2.0" min="1.1" max="20" step="0.1">
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">Ajouter résultat récent (x)</label>
+          <div style="display:flex; gap:8px;">
+            <input type="number" id="av-result-input" placeholder="ex: 3.45" min="1" step="0.01" style="flex:1">
+            <button class="btn btn-sm" onclick="addAviatorResult()">Ajouter</button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">Historique récent (du plus récent)</label>
+          <div class="history-wrap" id="av-history"></div>
+        </div>
+
+        <button class="btn btn-primary" onclick="predictAviator()">🎯 ANALYSER</button>
+      </div>
+
+      <!-- Résultats rapides à ajouter -->
+      <div class="card" style="margin-top:1rem;">
+        <div class="card-title">Ajout Rapide</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+          <button class="btn-sm btn" onclick="quickAdd(1.1)">x1.1</button>
+          <button class="btn-sm btn" onclick="quickAdd(1.3)">x1.3</button>
+          <button class="btn-sm btn" onclick="quickAdd(1.5)">x1.5</button>
+          <button class="btn-sm btn" onclick="quickAdd(2.0)">x2.0</button>
+          <button class="btn-sm btn" onclick="quickAdd(3.0)">x3.0</button>
+          <button class="btn-sm btn" onclick="quickAdd(5.0)">x5.0</button>
+          <button class="btn-sm btn" onclick="quickAdd(10.0)">x10</button>
+          <button class="btn-sm btn" onclick="quickAdd(20.0)">x20</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panneau droit : Résultats -->
+    <div>
+      <div class="card" id="av-result-card">
+        <div class="card-title"><span class="live-dot"></span> Résultat de l'analyse</div>
+        <div style="text-align:center; color:var(--muted); padding: 2rem 0;">
+          Entrez vos données et cliquez sur Analyser
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════ PAGE MATCH VIRTUEL ═══════════ -->
+<div class="page" id="page-virtual">
+<div class="container">
+
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="card-title">Sélection du Match</div>
+
+        <div class="form-row">
+          <label class="form-label">Équipe Domicile 🏠</label>
+          <select id="vm-home"></select>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">Équipe Extérieur ✈️</label>
+          <select id="vm-away"></select>
+        </div>
+
+        <button class="btn btn-primary" onclick="predictMatch()">⚽ PRÉDIRE LE MATCH</button>
+      </div>
+
+      <div class="card" style="margin-top:1rem;">
+        <div class="card-title">Match Aléatoire</div>
+        <p style="font-size:13px; color:var(--muted); margin-bottom:12px;">Générez un match aléatoire pour tester le modèle</p>
+        <button class="btn btn-sm" onclick="randomMatch()">🎲 Match aléatoire</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" id="vm-result-card">
+        <div class="card-title">Prédiction du Match</div>
+        <div style="text-align:center; color:var(--muted); padding: 2rem 0;">
+          Sélectionnez deux équipes et cliquez sur Prédire
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ═══════════ PAGE STATS ═══════════ -->
+<div class="page" id="page-stats">
+<div class="container">
+  <div class="card">
+    <div class="card-title">Statistiques Aviator</div>
+    <div id="stats-content" class="grid-3" style="gap:1.5rem; padding-top:0.5rem;">
+      <div class="stat-item"><div class="stat-val" id="st-count">—</div><div class="stat-key">Rounds analysés</div></div>
+      <div class="stat-item"><div class="stat-val" id="st-mean">—</div><div class="stat-key">Moyenne (x)</div></div>
+      <div class="stat-item"><div class="stat-val" id="st-median">—</div><div class="stat-key">Médiane (x)</div></div>
+      <div class="stat-item"><div class="stat-val" id="st-max">—</div><div class="stat-key">Maximum (x)</div></div>
+      <div class="stat-item"><div class="stat-val" id="st-pct2">—</div><div class="stat-key">% ≥ x2.0</div></div>
+      <div class="stat-item"><div class="stat-val" id="st-pct5">—</div><div class="stat-key">% ≥ x5.0</div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.5rem;">
+    <div class="card-title">Distribution des 20 derniers rounds</div>
+    <div id="dist-chart" style="display:flex; align-items:flex-end; gap:6px; height:120px; margin-top:0.5rem;"></div>
+    <div style="display:flex; gap:12px; margin-top:12px; flex-wrap:wrap; font-size:12px; color:var(--muted);">
+      <span>🔴 x1.0-1.5</span><span>🟡 x1.5-2.0</span><span>🟢 x2.0-5.0</span><span>🔵 x5.0+</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════ PAGE GUIDE ═══════════ -->
+<div class="page" id="page-guide">
+<div class="container">
+  <div class="card">
+    <div class="card-title">Comment utiliser le Predictor</div>
+    <div style="line-height:1.9; color:var(--text); font-size:14px;">
+      <h3 style="color:var(--accent); margin:1rem 0 0.5rem;">✈️ Aviator</h3>
+      <p>1. <strong>Ajoutez les multiplicateurs</strong> des rounds précédents via le champ ou les boutons rapides.</p>
+      <p>2. <strong>Définissez votre cible</strong> (ex: 2.0x = vous voulez retirer à x2.0 minimum).</p>
+      <p>3. Cliquez sur <strong>Analyser</strong> pour obtenir la probabilité estimée.</p>
+      <p>4. Respectez la <strong>recommandation de cashout</strong> affichée.</p>
+      <br>
+      <h3 style="color:var(--accent); margin:0 0 0.5rem;">⚽ Match Virtuel</h3>
+      <p>1. Sélectionnez les deux équipes qui s'affrontent.</p>
+      <p>2. Le modèle calcule les probabilités <strong>1 / X / 2</strong> via la loi de Poisson.</p>
+      <p>3. Suivez la <strong>mise recommandée</strong> et le <strong>% Kelly</strong> pour gérer votre bankroll.</p>
+      <br>
+      <div style="background:rgba(240,180,41,.08); border-left:3px solid var(--accent); padding:12px 16px; border-radius:0 8px 8px 0;">
+        <strong>⚠️ Avertissement</strong><br>
+        Ce logiciel est un outil d'analyse statistique. Il ne garantit aucun résultat. Jouez de manière responsable et ne misez que ce que vous pouvez vous permettre de perdre.
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Toast -->
+<div id="toast">✅ Résultat ajouté</div>
+
+<script>
+const API = '';
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if(id === 'stats') loadStats();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function pillClass(v) {
+  if(v < 1.5) return 'pill-low';
+  if(v < 2.0) return 'pill-mid';
+  if(v < 5.0) return 'pill-high';
+  return 'pill-mega';
+}
+
+function renderHistory(items) {
+  const w = document.getElementById('av-history');
+  w.innerHTML = items.map(v => `<span class="pill ${pillClass(v)}">x${v}</span>`).join('');
+}
+
+function quickAdd(v) {
+  document.getElementById('av-result-input').value = v;
+  addAviatorResult();
+}
+
+async function addAviatorResult() {
+  const v = parseFloat(document.getElementById('av-result-input').value);
+  if(isNaN(v) || v < 1) { showToast('⚠️ Valeur invalide (min: 1.0)'); return; }
+  const r = await fetch(API + '/api/aviator/add?v=' + v);
+  const d = await r.json();
+  renderHistory(d.last_10);
+  document.getElementById('av-result-input').value = '';
+  showToast('✅ x' + v + ' ajouté');
+}
+
+async function predictAviator() {
+  const target = parseFloat(document.getElementById('av-target').value) || 2.0;
+  const r = await fetch(API + '/api/aviator/predict?target=' + target);
+  const d = await r.json();
+
+  const colors = { green: '#68d391', amber: '#f0b429', red: '#fc8181' };
+  const col = colors[d.rec_class];
+
+  document.getElementById('av-result-card').innerHTML = `
+    <div class="card-title"><span class="live-dot"></span> Prédiction pour x${d.target}</div>
+    <div class="result-box" style="margin-bottom:1rem;">
+      <div class="result-prob" style="color:${col}">${d.probability}%</div>
+      <div class="result-label">Probabilité d'atteindre x${d.target}</div>
+    </div>
+
+    <div class="rec-${d.rec_class}" style="font-size:1rem; font-weight:700; text-align:center; margin-bottom:12px;">
+      ${d.recommendation}
+    </div>
+
+    <div style="font-size:13px; color:var(--muted); margin-bottom:4px;">Confiance du modèle : ${d.confidence}</div>
+    <div class="progress-wrap">
+      <div class="progress-bar" style="width:${d.conf_val}%; background:${col};"></div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; margin-top:1rem; font-size:13px;">
+      <div><div style="color:var(--muted); font-size:11px;">Cashout conseillé</div><div style="font-size:1.3rem; font-weight:800; color:var(--accent);">x${d.cashout_advice}</div></div>
+      <div style="text-align:right"><div style="color:var(--muted); font-size:11px;">Échantillons</div><div style="font-size:1.1rem; font-weight:700;">${d.details.n_samples}</div></div>
+    </div>
+
+    ${d.details.cycle_note ? `<div style="margin-top:12px; font-size:12px; color:#63b3ed; background:rgba(66,153,225,.1); padding:8px 12px; border-radius:6px;">${d.details.cycle_note}</div>` : ''}
+
+    <div style="margin-top:12px; font-size:12px; color:var(--muted);">
+      Tendance : <strong style="color:var(--text)">${d.details.streak}</strong> &nbsp;|&nbsp; Prob. base : ${d.details.base_prob}%
+    </div>
+  `;
+  renderHistory(await getHistory());
+}
+
+async function getHistory() {
+  const r = await fetch(API + '/api/aviator/stats');
+  const d = await r.json();
+  return d.last_10 || [];
+}
+
+// ─── Match Virtuel ───────────────────────────────────────────────────────────
+
+async function loadTeams() {
+  const r = await fetch(API + '/api/virtual/teams');
+  const d = await r.json();
+  const makeOpts = (sel, skipIdx) => d.teams.map((t,i) => `<option value="${t}" ${i===skipIdx?'selected':''}>${t}</option>`).join('');
+  document.getElementById('vm-home').innerHTML = makeOpts(null, 0);
+  document.getElementById('vm-away').innerHTML = makeOpts(null, 1);
+}
+
+async function predictMatch() {
+  const home = document.getElementById('vm-home').value;
+  const away = document.getElementById('vm-away').value;
+  if(home === away) { showToast('⚠️ Choisissez deux équipes différentes'); return; }
+
+  const r = await fetch(API + '/api/virtual/predict?home=' + encodeURIComponent(home) + '&away=' + encodeURIComponent(away));
+  const d = await r.json();
+
+  const maxP = Math.max(d.p_home, d.p_draw, d.p_away);
+  const barH = (p) => Math.max(8, Math.round(p * 1.2));
+  const barCol = (p) => p === maxP ? '#f0b429' : 'rgba(255,255,255,0.15)';
+  const dotHTML = (form) => form.map(r => `<div class="dot dot-${r}">${r}</div>`).join('');
+  const confCol = d.conf_val >= 70 ? '#68d391' : d.conf_val >= 50 ? '#f0b429' : '#fc8181';
+
+  document.getElementById('vm-result-card').innerHTML = `
+    <div class="card-title"><span class="live-dot"></span> Analyse du Match</div>
+
+    <div class="teams-vs">
+      <div style="text-align:center; flex:1;">
+        <div class="team-name">${d.home}</div>
+        <div style="color:var(--muted); font-size:11px; margin:4px 0;">Domicile</div>
+        <div class="form-dots" style="justify-content:center;">${dotHTML(d.form_home)}</div>
+      </div>
+      <div class="vs" style="padding:0 1rem;">VS</div>
+      <div style="text-align:center; flex:1;">
+        <div class="team-name">${d.away}</div>
+        <div style="color:var(--muted); font-size:11px; margin:4px 0;">Extérieur</div>
+        <div class="form-dots" style="justify-content:center;">${dotHTML(d.form_away)}</div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:4px; align-items:flex-end; height:80px; margin:12px 0;">
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;">
+        <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">${d.p_home}%</div>
+        <div style="width:100%; border-radius:4px 4px 0 0; background:${barCol(d.p_home)}; height:${barH(d.p_home)}px;"></div>
+        <div style="font-size:11px; margin-top:4px;">1</div>
+      </div>
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;">
+        <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">${d.p_draw}%</div>
+        <div style="width:100%; border-radius:4px 4px 0 0; background:${barCol(d.p_draw)}; height:${barH(d.p_draw)}px;"></div>
+        <div style="font-size:11px; margin-top:4px;">X</div>
+      </div>
+      <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end;">
+        <div style="font-size:11px; color:var(--muted); margin-bottom:4px;">${d.p_away}%</div>
+        <div style="width:100%; border-radius:4px 4px 0 0; background:${barCol(d.p_away)}; height:${barH(d.p_away)}px;"></div>
+        <div style="font-size:11px; margin-top:4px;">2</div>
+      </div>
+    </div>
+
+    <div style="background:var(--surface2); border-radius:8px; padding:12px; text-align:center; margin-bottom:12px;">
+      <div style="font-size:11px; color:var(--muted);">Score prédit</div>
+      <div class="score-badge" style="margin-top:6px;">${d.pred_score}</div>
+    </div>
+
+    <div style="font-size:13px; font-weight:700; color:${confCol}; margin-bottom:8px;">
+      ✅ Meilleure mise : ${d.best_bet} — ${d.best_team} (${d.best_prob}%)
+    </div>
+
+    <div style="font-size:12px; color:var(--muted);">Critère de Kelly : <strong style="color:var(--text)">${d.kelly_pct}% du bankroll</strong> &nbsp;|&nbsp; Confiance : ${d.confidence}</div>
+    <div class="progress-wrap">
+      <div class="progress-bar" style="width:${d.conf_val}%; background:${confCol};"></div>
+    </div>
+  `;
+}
+
+async function randomMatch() {
+  const r = await fetch(API + '/api/virtual/teams');
+  const d = await r.json();
+  const teams = d.teams;
+  const i1 = Math.floor(Math.random() * teams.length);
+  let i2 = Math.floor(Math.random() * (teams.length - 1));
+  if(i2 >= i1) i2++;
+  document.getElementById('vm-home').value = teams[i1];
+  document.getElementById('vm-away').value = teams[i2];
+  predictMatch();
+}
+
+// ─── Stats ───────────────────────────────────────────────────────────────────
+
+async function loadStats() {
+  const r = await fetch(API + '/api/aviator/stats');
+  const d = await r.json();
+  if(!d.count) return;
+  document.getElementById('st-count').textContent = d.count;
+  document.getElementById('st-mean').textContent = 'x' + d.mean;
+  document.getElementById('st-median').textContent = 'x' + d.median;
+  document.getElementById('st-max').textContent = 'x' + d.max;
+  document.getElementById('st-pct2').textContent = d.pct_above_2 + '%';
+  document.getElementById('st-pct5').textContent = d.pct_above_5 + '%';
+
+  // Distribution chart
+  const last20 = d.last_10 || [];
+  const buckets = { low:0, mid:0, high:0, mega:0 };
+  last20.forEach(v => {
+    if(v < 1.5) buckets.low++;
+    else if(v < 2.0) buckets.mid++;
+    else if(v < 5.0) buckets.high++;
+    else buckets.mega++;
+  });
+  const maxB = Math.max(...Object.values(buckets), 1);
+  const cols = { low:'#fc8181', mid:'#f0b429', high:'#68d391', mega:'#63b3ed' };
+  const labels = { low:'x1-1.5', mid:'x1.5-2', high:'x2-5', mega:'x5+' };
+  document.getElementById('dist-chart').innerHTML = Object.entries(buckets).map(([k,v]) => `
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:4px;">
+      <div style="font-size:12px;">${v}</div>
+      <div style="width:100%; border-radius:4px 4px 0 0; background:${cols[k]}; height:${Math.round(v/maxB*100)}px; min-height:4px;"></div>
+      <div style="font-size:10px; color:var(--muted);">${labels[k]}</div>
+    </div>
+  `).join('');
+}
+
+// ─── Clock ───────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('time-now').textContent = now.toLocaleTimeString('fr-FR');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// Init
+window.addEventListener('load', async () => {
+  await loadTeams();
+  const h = await getHistory();
+  renderHistory(h);
+});
+</script>
+</body>
+</html>
